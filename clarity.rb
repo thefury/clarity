@@ -2,8 +2,7 @@
 
 require 'optparse'
 
-# Sites to block
-
+HOSTS="/etc/hosts"
 SITES=[
   'facebook.com',
   'www.facebook.com',
@@ -11,14 +10,20 @@ SITES=[
   'www.reddit.com',
   'news.ycombinator.com',
 ]
+COMMENT='# CLARITY'
 
-# Parse usage options
+# TODO read more sites from a dotfile
+
 options = {}
 OptionParser.new do |opts|
   opts.banner = 'Usage: clarity.rb [options]'
 
   opts.on('-c', '--clear', 'Remove blocks from the hosts file') do |c|
     options[:clear] = c
+  end
+
+  opts.on('-v', '--verbose', 'Verbose output') do |v|
+    options[:verbose] = v
   end
 
   opts.on('-h', '--help', 'Print this help') do |h|
@@ -28,33 +33,21 @@ OptionParser.new do |opts|
 end.parse!
 
 
-class Clarity
-  HOSTS="/etc/hosts"
-
-  attr_accessor :hosts_file
-
-  def initialize
-    @hosts_file=HOSTS
-  end
-
-  def block_sites(sites=SITES)
-    File.open(@hosts_file, 'a') do |f|
-      sites.each { |site| f.puts "127.0.0.1 #{site} # CLARITY" }
-    end
-  end
-
-  def clear_blocks
-    content = File.readlines(@hosts_file).reject { |line| line =~ /# CLARITY/ }
-    File.open(@hosts_file, 'w') { |f| content.each { |line| f.puts line } }
+def block_sites
+  File.open(HOSTS, 'a') do |f|
+    SITES.each { |site| f.puts "127.0.0.1 #{site} #{COMMENT}" }
   end
 end
 
-# Main script
-
-clarity = Clarity.new
+def clear_blocks
+  content = File.readlines(HOSTS).reject { |line| line =~ /#{COMMENT}/ }
+    File.open(HOSTS, 'w') { |f| content.each { |line| f.puts line } }
+end
 
 if options[:clear]
-  clarity.clear_blocks
+  clear_blocks
+  puts 'cleared site blockages' if options[:verbose]
 else
-  clarity.block_sites
+  block_sites
+  puts 'blocked sites' if options[:verbose]
 end
